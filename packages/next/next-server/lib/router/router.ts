@@ -272,11 +272,12 @@ export function resolveHref(
   const base = new URL(currentPath, 'http://n')
   const urlAsString =
     typeof href === 'string' ? href : formatWithValidation(href)
-  // Return because it cannot be routed by the Next.js router
-  if (!parseRelativeUrl(urlAsString)) {
-    return (resolveAs ? [urlAsString] : urlAsString) as string
-  }
   try {
+    // Return because it cannot be routed by the Next.js router
+    if (!parseRelativeUrl(urlAsString)) {
+      return (resolveAs ? [urlAsString] : urlAsString) as string
+    }
+
     const finalUrl = new URL(urlAsString, base)
     finalUrl.pathname = normalizePathTrailingSlash(finalUrl.pathname)
     let interpolatedAs = ''
