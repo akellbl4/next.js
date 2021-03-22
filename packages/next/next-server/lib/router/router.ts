@@ -165,6 +165,13 @@ export function delBasePath(path: string): string {
 export function isLocalURL(url: string): boolean {
   // prevent a hydration mismatch on href for url with anchor refs
   if (url.startsWith('/') || url.startsWith('#')) return true
+  // prevent a hydration mismatch on href for url that is just a pathname
+  try {
+    new URL(url)
+  } catch (_) {
+    return true
+  }
+
   try {
     // absolute urls can be local if they are on the same origin
     const locationOrigin = getLocationOrigin()
