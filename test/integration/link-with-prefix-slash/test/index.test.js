@@ -47,7 +47,9 @@ describe('Link with prefix slash', () => {
     it('should render empty href as slash', async () => {
       expect($('#empty-link').attr('href')).toBe('/')
       expect(
-        await browser.elementByCss('#empty-link').getAttribute('href')
+        await browser.eval(
+          'document.querySelector("#empty-link").getAttribute("href")'
+        )
       ).toBe('/')
     })
 
