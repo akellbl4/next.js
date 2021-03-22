@@ -213,17 +213,14 @@ function Link(props: React.PropsWithChildren<LinkProps>) {
   const p = props.prefetch !== false
 
   const router = useRouter()
-  const pathname = (router && router.pathname) || '/'
 
   const { href, as } = React.useMemo(() => {
-    const [resolvedHref, resolvedAs] = resolveHref(pathname, props.href, true)
+    const [resolvedHref, resolvedAs] = resolveHref(props.href, true)
     return {
       href: resolvedHref,
-      as: props.as
-        ? resolveHref(pathname, props.as)
-        : resolvedAs || resolvedHref,
+      as: props.as ? resolveHref(props.as) : resolvedAs || resolvedHref,
     }
-  }, [pathname, props.href, props.as])
+  }, [props.href, props.as])
 
   let { children, replace, shallow, scroll, locale } = props
 

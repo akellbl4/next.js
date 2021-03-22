@@ -29,7 +29,6 @@ import {
 } from '../utils'
 import { isDynamicRoute } from './utils/is-dynamic'
 import { parseRelativeUrl } from './utils/parse-relative-url'
-import { searchParamsToUrlQuery } from './utils/querystring'
 import resolveRewrites from './utils/resolve-rewrites'
 import { getRouteMatcher } from './utils/route-matcher'
 import { getRouteRegex } from './utils/route-regex'
@@ -263,56 +262,35 @@ function omitParmsFromQuery(query: ParsedUrlQuery, params: string[]) {
  * Resolves a given hyperlink with a certain router state (basePath not included).
  * Preserves absolute urls.
  */
-export function resolveHref(
-  currentPath: string,
-  href: Url,
-  resolveAs?: boolean
-): string {
+export function resolveHref(href: Url, resolveAs?: boolean): string {
   // we use a dummy base url for relative urls
-  const base = new URL(currentPath, 'http://n')
   const urlAsString =
     typeof href === 'string' ? href : formatWithValidation(href)
+  // Return because it cannot be routed by the Next.js router
   try {
-    // Return because it cannot be routed by the Next.js router
-    if (!parseRelativeUrl(urlAsString)) {
-      return (resolveAs ? [urlAsString] : urlAsString) as string
-    }
-
-    const finalUrl = new URL(urlAsString, base)
+    const finalUrl = parseRelativeUrl(urlAsString)
     finalUrl.pathname = normalizePathTrailingSlash(finalUrl.pathname)
     let interpolatedAs = ''
 
-    if (
-      isDynamicRoute(finalUrl.pathname) &&
-      finalUrl.searchParams &&
-      resolveAs
-    ) {
-      const query = searchParamsToUrlQuery(finalUrl.searchParams)
-
+    if (isDynamicRoute(finalUrl.pathname) && finalUrl.query && resolveAs) {
       const { result, params } = interpolateAs(
         finalUrl.pathname,
         finalUrl.pathname,
-        query
+        finalUrl.query
       )
 
       if (result) {
         interpolatedAs = formatWithValidation({
           pathname: result,
           hash: finalUrl.hash,
-          query: omitParmsFromQuery(query, params),
+          query: omitParmsFromQuery(finalUrl.query, params),
         })
       }
     }
 
-    // if the origin didn't change, it means we received a relative href
-    const resolvedHref =
-      finalUrl.origin === base.origin
-        ? finalUrl.href.slice(finalUrl.origin.length)
-        : finalUrl.href
-
     return (resolveAs
-      ? [resolvedHref, interpolatedAs || resolvedHref]
-      : resolvedHref) as string
+      ? [finalUrl.href, interpolatedAs || finalUrl.href]
+      : finalUrl.href) as string
   } catch (_) {
     return (resolveAs ? [urlAsString] : urlAsString) as string
   }
@@ -324,10 +302,10 @@ function stripOrigin(url: string) {
   return url.startsWith(origin) ? url.substring(origin.length) : url
 }
 
-function prepareUrlAs(router: NextRouter, url: Url, as?: Url) {
+function prepareUrlAs(url: Url, as?: Url) {
   // If url and as provided as an object representation,
   // we'll format them into the string version here.
-  let [resolvedHref, resolvedAs] = resolveHref(router.pathname, url, true)
+  let [resolvedHref, resolvedAs] = resolveHref(url, true)
   const origin = getLocationOrigin()
   const hrefHadOrigin = resolvedHref.startsWith(origin)
   const asHadOrigin = resolvedAs && resolvedAs.startsWith(origin)
@@ -337,7 +315,7 @@ function prepareUrlAs(router: NextRouter, url: Url, as?: Url) {
 
   const preparedUrl = hrefHadOrigin ? resolvedHref : addBasePath(resolvedHref)
   const preparedAs = as
-    ? stripOrigin(resolveHref(router.pathname, as))
+    ? stripOrigin(resolveHref(as))
     : resolvedAs || resolvedHref
 
   return {
@@ -772,7 +750,7 @@ export default class Router implements BaseRouter {
         } catch {}
       }
     }
-    ;({ url, as } = prepareUrlAs(this, url, as))
+    ;({ url, as } = prepareUrlAs(url, as))
     return this.change('pushState', url, as, options)
   }
 
@@ -783,7 +761,7 @@ export default class Router implements BaseRouter {
    * @param options object you can define `shallow` and other options
    */
   replace(url: Url, as?: Url, options: TransitionOptions = {}) {
-    ;({ url, as } = prepareUrlAs(this, url, as))
+    ;({ url, as } = prepareUrlAs(url, as))
     return this.change('replaceState', url, as, options)
   }
 
@@ -1101,7 +1079,6 @@ export default class Router implements BaseRouter {
 
             if (pages.includes(parsedHref.pathname)) {
               const { url: newUrl, as: newAs } = prepareUrlAs(
-                this,
                 destination,
                 destination
               )
