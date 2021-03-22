@@ -273,7 +273,7 @@ export function resolveHref(
   const urlAsString =
     typeof href === 'string' ? href : formatWithValidation(href)
   // Return because it cannot be routed by the Next.js router
-  if (!isLocalURL(urlAsString)) {
+  if (!parseRelativeUrl(urlAsString)) {
     return (resolveAs ? [urlAsString] : urlAsString) as string
   }
   try {
